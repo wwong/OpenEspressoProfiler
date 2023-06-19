@@ -65,7 +65,7 @@ We may choose to implement some Wi-Fi functionality in the future, which would d
 
 
 ## What's next?
-
+* 3D-printed Case
 * Web-based UI
   * Web Bluetooth connection to this (and other) BLE pressure sensors
   * Smart Scale support (targeting Acaia Lunar first)
