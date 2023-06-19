@@ -5,15 +5,13 @@
 #include "esp_bt_device.h"
 #include "string"
 
-#include "BLEBattery.h"
-#include "OEPLog.h"
-#include "OEPPressure.h"
+#include "ble/BLEBattery.h"
+#include "ble/OEPLog.h"
+#include "ble/OEPPressure.h"
+#include "config.h"
 
-#define LED_PIN 2
-#define PRESSURE_PIN 32
 
-#define PRESSURE_M 0.004495915872
-#define PRESSURE_B 0.4350627433
+#define PSI_TO_BAR 0.0689476
 
 OEPLog *LOG;
 BLEBattery *BATTERY;
@@ -55,6 +53,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
     };
     void onDisconnect(BLEServer* pServer) {
         deviceConnected = false;
+        pServer->startAdvertising();
     }
 };
 
@@ -110,31 +109,45 @@ void setup() {
     pAdvertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
     pAdvertising->start();
-
-
 }
 
-int16_t readPressureMillibars() {
-    uint16_t adcValue = analogRead(PRESSURE_PIN);
-    // Transducer parameters
-    // Taken from a linear regression of measured pressure in Bars (y) vs ADC readings (x)
-    return floor(1000.0 * ((float(adcValue) * PRESSURE_M) - PRESSURE_B));
+double readAdcVoltage(uint8_t pin) {
+    double calibration = 1.000;
+    uint32_t adcValue = analogReadMilliVolts(pin) * calibration;
+    return double(adcValue);
+}
+
+int16_t readPressure() {
+    // Voltage divider values
+    uint16_t r1 = R1_OHMS, r2 = R2_OHMS;
+    // Pressure transducer values
+    uint16_t maxPsi = TRANSDUCER_MAX_PSI;
+    float minV = TRANSDUCER_MIN_V, maxV = TRANSDUCER_MAX_V;
+
+    // Calculated values
+    double measuredMillivolts = readAdcVoltage(PRESSURE_PIN) / 1000.0;
+    Serial.printf("Measured Voltage: %f\n", measuredMillivolts);
+    float voltageDividerFactor = float(r2) / float(r1 + r2);
+    double rescaledVoltage = measuredMillivolts / voltageDividerFactor;
+    Serial.printf("Rescaled Voltage: %f\n", rescaledVoltage);
+    double psiFactor = (rescaledVoltage - minV) / (maxV - minV);
+    Serial.printf("PSI: %f\n", maxPsi * psiFactor);
+    return int16_t(1000 * maxPsi * psiFactor * PSI_TO_BAR);
 }
 
 unsigned long lastPoll = 0;
 
 void loop() {
     unsigned long now = millis();
-    if (now - lastPoll > 250) {
+    if (now - lastPoll > 100) {
         Serial.println("ping");
         lastPoll = now;
 
         digitalWrite(LED_PIN, deviceConnected);
 
         if (PRESSURE != nullptr) {
-            int16_t pressure = readPressureMillibars();
-            Serial.print("Reporting new pressure reading: ");
-            Serial.println(pressure);
+            int16_t pressure = readPressure();
+            Serial.printf("Reporting new pressure reading: %d\n", pressure);
             PRESSURE->updatePressure(pressure);
         }
     }
