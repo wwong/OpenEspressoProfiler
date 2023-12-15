@@ -143,7 +143,7 @@ void loop() {
         Serial.println("ping");
         lastPoll = now;
 
-        digitalWrite(LED_PIN, deviceConnected);
+        digitalWrite(LED_PIN, INVERT_LED ^ deviceConnected);
 
         if (PRESSURE != nullptr) {
             int16_t pressure = readPressure();

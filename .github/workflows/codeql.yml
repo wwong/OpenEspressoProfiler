@@ -89,7 +89,7 @@ jobs:
     #     ./location_of_script_within_repo/buildscript.sh
 
     - name: Build PlatformIO examples
-      run: pio ci --board=nodemcu-32s
+      run: pio ci --board=nodemcu-32s --board seeed_xiao_esp32s3
       env:
         PLATFORMIO_CI_SRC: ./src/
 
