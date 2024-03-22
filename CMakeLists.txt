@@ -12,7 +12,9 @@ set(CMAKE_CXX_COMPILER_WORKS 1)
 
 project("OpenEspressoProfiler" C CXX)
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeListsPrivate.txt)
 include(CMakeListsPrivate.txt)
+endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/CMakeListsUser.txt)
 include(CMakeListsUser.txt)
